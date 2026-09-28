@@ -53,14 +53,12 @@ class Nordic(base_nordic):
         self.Args: A dictionary containing parameters (equivalent to MATLAB struct).
              Requires at least the key 'magnitude_only'.
         """
-        # 1. Load magnitude image and safely cast directly to float32 to halve memory usage
         info = nib.load(fn_magn_in)
         I_M = info.get_fdata(dtype=np.float32)
         np.abs(I_M, out=I_M)  # In-place absolute value to save memory
 
         info_phase = None
 
-        # Check if we need complex data (magnitude_only != 1)
         if not self.Args.get('magnitude_only', 0) == 1:
             info_phase = nib.load(fn_phase_in)
             I_P = info_phase.get_fdata(dtype=np.float64)
@@ -71,7 +69,6 @@ class Nordic(base_nordic):
 
             print('Phase should be -pi to pi...')
 
-            # 2. In-place mathematical scaling maps phase to [-pi, pi] without intermediate arrays
             if p_range != 0:
                 I_P -= p_min
                 I_P *= (2.0 * np.pi / p_range)
@@ -81,10 +78,8 @@ class Nordic(base_nordic):
 
             print(f"Phase data range is {I_P.min():.2f} to {I_P.max():.2f}")
 
-            # 3. Memory-efficient complex array construction
             II = np.empty(I_M.shape, dtype=np.complex128)
 
-            # .real and .imag are writeable views in numpy. We calculate and multiply directly.
             np.cos(I_P, out=II.real)
             II.real *= I_M
 
@@ -206,8 +201,6 @@ class Nordic(base_nordic):
         # Remove temporal phase
         self.KSP2 = KSP2*np.exp(-1j * np.angle(DD_phase))
         self.phases = phases
-    # NOTE: Ensure `calculate_NORDIC_threshold` and `updated_sub_LLR_Processing_v2`
-    # are defined/imported in your module.
 
     def NORDIC_processing(self):
         """
@@ -223,7 +216,6 @@ class Nordic(base_nordic):
         self.Args['kernel_size'] = [default_k, default_k, default_k]
 
         # 2. Apply g-factor normalization
-        # Broadcast the 3D g-factor across the 4D temporal dimension safely
         gfactor_exp = self.gfactor[..., np.newaxis]
         mask_g = gfactor_exp != 0
         np.divide(self.II, gfactor_exp, out=self.II, where=mask_g)
@@ -349,7 +341,7 @@ class Nordic(base_nordic):
         base_name = fn_out.replace('.nii.gz', '').replace('.nii', '')
 
         # =========================================================
-        # 1. Pre-NORDIC Maps (g-factor)
+        # 1. g-factors
         # =========================================================
         if self.Args.get('save_gfactor_map') == 1:
             g_img = np.abs(self.gfactor).astype(np.float32)
@@ -357,7 +349,7 @@ class Nordic(base_nordic):
             save_nifti(g_img, "gfactor_", "", self.info)
 
         # =========================================================
-        # 2. Main Image Outputs (Magnitude & Phase)
+        # 2. Magnitude & Phase
         # =========================================================
         if self.Args.get('make_complex_nii') == 1:
             # Save Magnitude
@@ -394,7 +386,7 @@ class Nordic(base_nordic):
             save_nifti(res_scaled, "RESIDUAL_", "", self.info)
 
         # =========================================================
-        # 4. Auxiliary Metrics & Logging
+        # 4. Metrics & Logging
         # =========================================================
         if self.Args.get('save_add_info') == 1:
             mat_path = os.path.join(dir_out, f"{base_name}_info.mat")
@@ -402,7 +394,6 @@ class Nordic(base_nordic):
             safe_args = {k: v for k, v in self.Args.items() if not isinstance(v, np.ndarray)}
             savemat(mat_path, {'ARG': safe_args})
 
-        # Optional NORDIC Auxiliary Maps
         aux_maps = [
             ('save_add_info_NOISE', 'NOISE', 'gfactor_post_normalization_'),
             ('save_add_info_Component_threshold', 'Component_threshold', 'Component_threshold_'),

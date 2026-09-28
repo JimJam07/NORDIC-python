@@ -62,7 +62,6 @@ def g_factor_processing(KSP2, arg):
 
         arg['data_has_zero_elements'] = 1
 
-    # 7. Override for specific MP configurations
     if arg.get('MP') == 2:
         gfactor = np.ones_like(gfactor)
 

@@ -3,8 +3,7 @@ import itertools
 import concurrent.futures
 import scipy.linalg
 
-# NOTE: Ensure `process_subset` is imported/defined in your module.
-# from your_module import process_subset
+# todo: verify thresholding logic is consistent with matlab
 
 def sub_LLR_Processing(A, arg):
     """
@@ -115,7 +114,6 @@ def process_subset(IN, arg):
 
     start_x = (nstepx * w1) + ostepx
 
-    # Create a zero-copy memory view of the array subset
     AA = IN[start_x: start_x + w1, ...]
 
     ### 2. CORE CALCULATION ###
@@ -163,7 +161,7 @@ def calc_subset(IN, arg):
         n3_idx.append(edge_n3)
 
     ### 4. CORE PROCESSING LOOP ###
-    # itertools.product flattens the 2D loop into a fast, C-optimized iterator
+    # itertools.product - faster
     for n2, n3 in itertools.product(n2_idx, n3_idx):
 
         slc_2 = slice(n2, n2 + w2)
@@ -175,16 +173,12 @@ def calc_subset(IN, arg):
             # We slice the first dimension fully, and specify Y and Z
             comp_thresh_tmp = np.min(comp_thresh_full[:, slc_2, slc_3, :])
 
-        # Extract the local block memory view
         local_block = IN[:, slc_2, slc_3, :]
 
-        # Execute SVD and MPPCA tracking
         update, idx_scalar, energy_scrub_scalar, SNR_weight_scalar, NOISE_scalar = \
             LLR_NORDIC_MPPCA(local_block, lambda2, soft_thrs, comp_thresh_tmp, arg)
 
         ### 5. IN-PLACE ACCUMULATION ###
-        # This completely replaces the slow MATLAB `subfunction_update_matrix_local`.
-        # NumPy cleanly broadcasts the scalar outputs across the 3D sliced volumes.
         IN_UPDATE[:, slc_2, slc_3, :] += update
         KSP2_weight[:, slc_2, slc_3] += 1.0  # Assuming standard uniform block weight
         KSP2_tmp_update_threshold[:, slc_2, slc_3] += idx_scalar
@@ -192,7 +186,6 @@ def calc_subset(IN, arg):
         SNR_weight[:, slc_2, slc_3] += SNR_weight_scalar
         NOISE[:, slc_2, slc_3] += NOISE_scalar
 
-    ### 6. PACKAGE OUTPUT ###
     OUT_ARRAY = {
         'KSP2_weight': KSP2_weight,
         'KSP2_tmp_update_threshold': KSP2_tmp_update_threshold,
@@ -271,7 +264,6 @@ def LLR_NORDIC_MPPCA(IN, lambda2, soft_thrs, comp_thresh_tmp, arg):
         S[t:] = 0
 
     else:
-        # Soft Thresholding via percentage count
         idx = np.sum(S < lambda2)
         energy_scrub = 0.0
 
