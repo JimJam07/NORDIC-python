@@ -61,7 +61,7 @@ class Nordic(base_nordic):
 
         if not self.Args.get('magnitude_only', 0) == 1:
             info_phase = nib.load(fn_phase_in)
-            I_P = info_phase.get_fdata(dtype=np.float64)
+            I_P = info_phase.get_fdata(dtype=np.float32)
 
             p_min = I_P.min()
             p_max = I_P.max()
@@ -78,7 +78,7 @@ class Nordic(base_nordic):
 
             print(f"Phase data range is {I_P.min():.2f} to {I_P.max():.2f}")
 
-            II = np.empty(I_M.shape, dtype=np.complex128)
+            II = np.empty(I_M.shape, dtype=np.complex64)
 
             np.cos(I_P, out=II.real)
             II.real *= I_M
@@ -317,9 +317,6 @@ class Nordic(base_nordic):
         Features in-place memory optimization, dynamic range scaling, and native nibabel header management.
         """
 
-        # ---------------------------------------------------------
-        # Helper 2: NIfTI File Writer
-        # ---------------------------------------------------------
         def save_nifti(data_array, prefix, suffix, source_info):
             """Wraps array in nibabel NIfTI object preserving original headers."""
             if data_array is None or source_info is None:
