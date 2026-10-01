@@ -11,8 +11,8 @@ Clone this repository and set up a Python virtual environment to keep dependenci
 
 ```bash
 # 1. Clone the repository
-git clone [https://github.com/yourusername/nordic-python.git](https://github.com/yourusername/nordic-python.git)
-cd nordic-python
+git clone https://github.com/JimJam07/NORDIC-python.git
+cd NORDIC-python
 
 # 2. Create and activate a virtual environment (recommended)
 python -m venv venv
